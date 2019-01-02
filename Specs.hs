@@ -1,7 +1,7 @@
 import Test.QuickCheck
 import WaterJuggle
 
-prop_initial = big initial == 0 && small initial == 0
+prop_initial _ = big initial == 0 && small initial == 0
 
 prop_fillBig :: State -> Bool
 prop_fillBig state = big (fillBig state) == 5 && small (fillBig state) == small state
@@ -28,14 +28,24 @@ prop_pourBigInSmall s = let state = (abs (big s) `mod` 6, abs (small s) `mod` 4)
                             state' = pourBigInSmall state
     in big state <= 5 && small state <= 3
     && if big state > 0 && small state < 3 then small state' > small state else True
-    && if small state' > small state then big state' > big state else True
+    && if small state' > small state then big state' < big state else True
 
-main = do
-    quickCheck prop_initial
-    quickCheck prop_fillBig
-    quickCheck prop_fillSmall
-    quickCheck prop_emptyBig
-    quickCheck prop_emptySmall
-    quickCheck prop_pourSmallInBig
-    quickCheck prop_pourBigInSmall
-    
+prop_fillActions :: State -> Bool
+prop_fillActions _ = let state = actions [FillSmall,FillBig] initial
+    in small state == 3 && big state == 5
+
+prop_pourBigInSmallActions :: State -> Bool
+prop_pourBigInSmallActions _ = let state = actions [FillBig,PourBigInSmall] initial
+    in big state == 2 && small state == 3
+
+main = mapM_ quickCheck 
+    [prop_initial
+    ,prop_fillBig
+    ,prop_fillSmall
+    ,prop_emptyBig
+    ,prop_emptySmall
+    ,prop_pourSmallInBig
+    ,prop_pourBigInSmall
+    ,prop_fillActions
+    ,prop_pourBigInSmallActions
+    ]
