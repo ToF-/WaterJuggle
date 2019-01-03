@@ -1,5 +1,6 @@
 import Test.QuickCheck
 import WaterJuggle
+import Data.List
 
 doCheck :: String -> (State -> Bool) -> IO ()
 doCheck s p = do
@@ -39,4 +40,13 @@ main = mapM_ (uncurry doCheck)
     ,("empty big jug makes it zero",
         \state -> let state' = action EmptyBigJug state 
         in big state' == 0 && small state' == small state)
+    ,("initialize empty jugs",
+        \state -> let state' = action Initialize state
+        in state' == initial) 
+    ,("next actions given an initial step gives no repeated state",
+        \state -> let states = map (\a -> action a initial) (nextActions [initial])    
+        in not (initial `elem` states) && not (null states))
+    ,("next actions given any step gives no repeated state",
+        \state -> let states = map (\a -> action a state) (nextActions [state])    
+        in not (state `elem` states) && not (null states))
     ]
