@@ -1,15 +1,41 @@
 import Test.QuickCheck
+import Data.List (sort, nub)
 
 data State = State { big :: Integer, small :: Integer }
-    deriving (Show,Eq)
+    deriving (Show,Eq,Ord)
 
 data Action = FillBig | FillSmall | EmptyBig | EmptySmall | PourBigSmall | PourSmallBig
+    deriving (Eq,Show, Enum)
+
+data Path = Path { states :: [State], actions :: [Action] }
+    deriving (Eq, Show)
 
 instance Arbitrary State where
     arbitrary = do 
         b <- choose (0, 5)
         s <- choose (0, 3)
         return $ State b s
+
+instance Arbitrary Action where
+    arbitrary = do
+        n <- choose (0,5)
+        return $ toEnum n
+
+addActions :: [State] -> Gen [Action]
+addActions sts = do
+    let state = last sts
+        next  = nextAction sts
+        if null next then 
+    a <- elements (nextActions sts)
+    return a
+
+    
+instance Arbitrary Path where
+    arbitrary = do
+        let sts = [State 0 0]
+        as <- add sts
+        let sts = scanl (\st a -> action a st) (State 0 0) as
+        return $ Path sts as
 
 action :: Action -> State -> State
 action FillBig    (State _ s) = State 5 s
@@ -50,6 +76,9 @@ prop_PourSmallBig st@(State _ 0) = action PourSmallBig st == st
 prop_PourSmallBig st = let st' = action PourSmallBig st
     in small st' < small st && big st' > big st
 
+prop_Path :: Path -> Bool
+prop_Path p = let sts = sort (states p) in sts == nub sts
+
 main = do
     putStr "dummy check\t"
     quickCheck True
@@ -69,5 +98,8 @@ main = do
     putStr "pour small into big doesn't change state when big = 5 or small = 0\n"
     putStr "pour small into big makes big bigger and small smaller\t" 
     quickCheck prop_PourSmallBig
+    putStr "a path contains 0 to N actions\n"
+    putStr "a path contains no action that lead to a repeated state\t"
+    quickCheck $ verbose prop_Path
 
     
