@@ -3,7 +3,7 @@ import Test.QuickCheck
 data State = State { big :: Integer, small :: Integer }
     deriving (Show)
 
-data Action = FillBig | FillSmall | EmptyBig
+data Action = FillBig | FillSmall | EmptyBig | EmptySmall 
 
 instance Arbitrary State where
     arbitrary = do 
@@ -12,9 +12,10 @@ instance Arbitrary State where
         return $ State b s
 
 action :: Action -> State -> State
-action FillBig   (State _ s) = State 5 s
-action FillSmall (State b _) = State b 3
-action EmptyBig  (State _ s) = State 0 s
+action FillBig    (State _ s) = State 5 s
+action FillSmall  (State b _) = State b 3
+action EmptyBig   (State _ s) = State 0 s
+action EmptySmall (State b _) = State b 0
 
 prop_StateInvariant :: State -> Bool
 prop_StateInvariant st = big st >= 0 && big st <= 5 && small st >= 0 && small st <= 3
@@ -30,6 +31,11 @@ prop_FillSmall st = let st' = action FillSmall st
 prop_EmptyBig :: State -> Bool
 prop_EmptyBig st = let st' = action EmptyBig st 
                     in big st' == 0 && small st' == small st
+
+prop_EmptySmall :: State -> Bool
+prop_EmptySmall st = let st' = action EmptySmall st 
+                    in big st' == big st && small st' == 0
+
 main = do
     putStr "dummy check\t"
     quickCheck True
@@ -41,5 +47,7 @@ main = do
     quickCheck prop_FillSmall
     putStr "empty big makes big = 0\t"
     quickCheck prop_EmptyBig
+    putStr "empty small makes small = 0\t"
+    quickCheck prop_EmptySmall
 
     
