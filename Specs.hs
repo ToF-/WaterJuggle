@@ -24,18 +24,15 @@ possibleActions sts = filter (\a -> let st = action a (last sts) in not (st `ele
 
 nextAction :: [Action] -> Gen [Action]
 nextAction as = do
-    let sts = computeStates as 
-        possible = possibleActions sts
-    if null possible || any (\st -> big st == 4) sts then return as else do 
-                                    a <- elements possible 
+    let states = computeStates as 
+        possibles = possibleActions states
+    if null possibles || any (\st -> big st == 4) states then return as else do 
+                                    a <- elements possibles
                                     as' <- nextAction (as ++ [a])
                                     return as'
 
 instance Arbitrary Path where
-    arbitrary = do 
-        as <- nextAction []
-        let sts = computeStates as
-        return $ Path as
+    arbitrary = nextAction [] >>= return . Path
             
 
 action :: Action -> State -> State
