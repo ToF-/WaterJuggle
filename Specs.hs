@@ -5,37 +5,38 @@ data State = State { big :: Integer, small :: Integer }
     deriving (Show,Eq,Ord)
 
 data Action = FillBig | FillSmall | EmptyBig | EmptySmall | PourBigSmall | PourSmallBig
-    deriving (Eq,Show, Enum)
+    deriving (Eq,Show, Enum, Bounded)
 
-data Path = Path { states :: [State], actions :: [Action] }
+data Path = Path { actions :: [Action] }
     deriving (Eq, Show)
 
 instance Arbitrary State where
-    arbitrary = do 
-        b <- choose (0, 5)
-        s <- choose (0, 3)
-        return $ State b s
+    arbitrary = choose (0, 5) >>= \b -> choose (0,3) >>= \s -> return (State b s) 
 
 instance Arbitrary Action where
-    arbitrary = do
-        n <- choose (0,5)
-        return $ toEnum n
+    arbitrary = elements [minBound .. maxBound]
 
-addActions :: [State] -> Gen [Action]
-addActions sts = do
-    let state = last sts
-        next  = nextAction sts
-        if null next then 
-    a <- elements (nextActions sts)
-    return a
+computeStates :: [Action] -> [State]
+computeStates as = scanl (\st a -> action a st) (State 0 0) as
 
-    
+possibleActions :: [State] -> [Action]
+possibleActions sts = filter (\a -> let st = action a (last sts) in not (st `elem` sts)) (map toEnum [0..5])
+
+nextAction :: [Action] -> Gen [Action]
+nextAction as = do
+    let sts = computeStates as 
+        possible = possibleActions sts
+    if null possible || any (\st -> big st == 4) sts then return as else do 
+                                    a <- elements possible 
+                                    as' <- nextAction (as ++ [a])
+                                    return as'
+
 instance Arbitrary Path where
-    arbitrary = do
-        let sts = [State 0 0]
-        as <- add sts
-        let sts = scanl (\st a -> action a st) (State 0 0) as
-        return $ Path sts as
+    arbitrary = do 
+        as <- nextAction []
+        let sts = computeStates as
+        return $ Path as
+            
 
 action :: Action -> State -> State
 action FillBig    (State _ s) = State 5 s
@@ -77,29 +78,34 @@ prop_PourSmallBig st = let st' = action PourSmallBig st
     in small st' < small st && big st' > big st
 
 prop_Path :: Path -> Bool
-prop_Path p = let sts = sort (states p) in sts == nub sts
+prop_Path path = let states = computeStates (actions path) in (nub . sort) states == sort states
 
+prop_Solved :: Path -> Bool
+prop_Solved path = not (any (\st -> big st == 4) (computeStates (actions path)))
 main = do
-    putStr "dummy check\t"
+    putStr "dummy check\n"
     quickCheck True
-    putStr "state invariant\t"
+    putStr "state invariant\n"
     quickCheck prop_StateInvariant
-    putStr "filling big makes big = 5\t"
+    putStr "filling big makes big = 5\n"
     quickCheck prop_FillBig
-    putStr "filling big makes small = 3\t"
+    putStr "filling big makes small = 3\n"
     quickCheck prop_FillSmall
-    putStr "empty big makes big = 0\t"
+    putStr "empty big makes big = 0\n"
     quickCheck prop_EmptyBig
-    putStr "empty small makes small = 0\t"
+    putStr "empty small makes small = 0\n"
     quickCheck prop_EmptySmall
     putStr "pour big into small doesn't change state when big = 0 or small = 3\n"
-    putStr "pour big into small makes small bigger and big smaller\t" 
+    putStr "pour big into small makes small bigger and big smaller\n" 
     quickCheck prop_PourBigSmall
     putStr "pour small into big doesn't change state when big = 5 or small = 0\n"
-    putStr "pour small into big makes big bigger and small smaller\t" 
+    putStr "pour small into big makes big bigger and small smaller\n" 
     quickCheck prop_PourSmallBig
     putStr "a path contains 0 to N actions\n"
-    putStr "a path contains no action that lead to a repeated state\t"
-    quickCheck $ verbose prop_Path
+    putStr "a path contains no action that lead to a repeated state\n"
+    quickCheck prop_Path
+    putStr "a path contains no action that lead to a state where big == 4\n"
+    quickCheck prop_Solved
+    
 
     
