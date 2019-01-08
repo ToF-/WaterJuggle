@@ -32,7 +32,7 @@ main = do
     quickCheck prop_StateInvariant
     putStr "filling big makes big = 5"
     quickCheck prop_FillBig
-    putStr "filling big makes big = 3"
+    putStr "filling big makes small = 3"
     quickCheck prop_FillSmall
 
     
