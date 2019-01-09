@@ -7,6 +7,9 @@ data State = State { big :: Integer, small :: Integer }
 data Action = FillBig | FillSmall | EmptyBig | EmptySmall | PourBigSmall | PourSmallBig
     deriving (Eq,Show, Enum, Bounded)
 
+allActions :: [Action]
+allActions = [minBound .. maxBound]
+
 data Path = Path { actions :: [Action] }
     deriving (Eq, Show)
 
@@ -14,13 +17,15 @@ instance Arbitrary State where
     arbitrary = choose (0, 5) >>= \b -> choose (0,3) >>= \s -> return (State b s) 
 
 instance Arbitrary Action where
-    arbitrary = elements [minBound .. maxBound]
+    arbitrary = elements allActions
 
 computeStates :: [Action] -> [State]
 computeStates as = scanl (\st a -> action a st) (State 0 0) as
 
 possibleActions :: [State] -> [Action]
-possibleActions sts = filter (\a -> let st = action a (last sts) in not (st `elem` sts)) (map toEnum [0..5])
+possibleActions states = [a | a <- allActions, 
+                              st <- [action a (last states)], 
+                              not (st `elem` states)]
 
 nextAction :: [Action] -> Gen [Action]
 nextAction as = do
